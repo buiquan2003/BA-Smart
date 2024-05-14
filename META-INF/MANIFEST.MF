@@ -1,0 +1,13 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Smart
+Bundle-SymbolicName: Smart
+Bundle-Version: 1.0.0.qualifier
+Bundle-ClassPath: Smart.jar,
+ 84867/Downloads/mysql-connector-java-8.0.27.jar
+Automatic-Module-Name: Smart
+Bundle-RequiredExecutionEnvironment: JavaSE-17
+Export-Package: Controller,
+ Dao,
+ Data,
+ Model

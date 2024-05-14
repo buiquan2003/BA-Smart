@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="ISO-8859-1">
+<title>Home Page</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+    }
+    .container {
+        max-width: 600px;
+        margin: 0 auto;
+        text-align: center;
+        padding: 20px;
+    }
+    .logout-button {
+        padding: 10px 20px;
+        background-color: #f44336;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+    }
+    table, th, td {
+        border: 1px solid black;
+    }
+    th, td {
+        padding: 8px;
+        text-align: left;
+    }
+</style>
+</head>
+<body>
+    <div class="container">
+        <h1>Chào mừng đến trang home!</h1>
+        <p>Đây là nội dung trang home.</p>
+        <a href="/Smart/UserController?action=logout">Logout</a>
+        <h2>Danh sách người dùng</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>password</th>
+                </tr>
+            </thead>
+            <tbody id="userTableBody">
+              
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+
+    
+        function fetchUsers() {
+            fetch('http://localhost:8080/Smart/UserController?action=getAllUsers')
+                .then(response => response.json())
+                .then(data => {
+                    const userTableBody = document.getElementById('userTableBody');
+                    userTableBody.innerHTML = ''; // Clear any existing rows
+                    data.data.forEach(user => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${user.id}</td>
+                            <td>${user.username}</td>
+                            <td>${user.email}</td>
+                            <td>${user.password}</td>
+                        `;
+                        userTableBody.appendChild(row);
+                    });
+                })
+                .catch(error => console.error('Error fetching users:', error));
+        }
+
+        window.onload = fetchUsers;
+    </script>
+</body>
+</html>
