@@ -20,7 +20,7 @@ import Model.ReponseObject;
 import Model.User;
 
 
-@WebServlet("/UserController")
+@WebServlet("/api/users/*")
 public class UserController extends HttpServlet {
 	private static final long serialVersionUID = 1L;
        
@@ -31,94 +31,78 @@ public class UserController extends HttpServlet {
 
 	
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-		String action = request.getParameter("action");
-		
-		if("getAllUsers".equals(action)) {
-			List<User> users = UserDao.getAllUser();
-			ReponseObject object = new ReponseObject("fetch success", users, "Successfully fetched all users from the database");
-			ObjectMapper mapper = new ObjectMapper();
-			String jsonRepon = mapper.writeValueAsString(object);
-			response.setContentType("application/json");
-			PrintWriter printWriter = response.getWriter();
-			printWriter.println(jsonRepon);
-			
-		} else if ("logout".equals(action)) {
-			HttpSession httpSession = request.getSession();
-			httpSession.removeAttribute("accessToken");
-			response.sendRedirect("/Smart/signIn.html");
-
+		String pathInfo = request.getPathInfo();
+		if(pathInfo == null || pathInfo.equals("/")) {
+			getAllUsers(request, response);
+		} else {
+			response.sendError(HttpServletResponse.SC_NOT_FOUND);
 		}
 	}
 
-	
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-		
-		response.setContentType("text/html");
-		PrintWriter writer = response.getWriter();
-		String action = request.getParameter("action");
-		
-		if ("addUser".equals(action)) {
-			String name = request.getParameter("username");
-			String email = request.getParameter("email");
-			String password = request.getParameter("password");
+		String pathInfo = request.getPathInfo();
+		if(pathInfo == null || pathInfo.equals("/add")) {
+			addUser(request, response);
+		} else if(pathInfo.equals("/authenticate")) {
+			authenticateUser(request, response);
 			
-			User user = new User(name, email, password);
-			
-			boolean issucces = UserDao.addUser(user);
-			
-			if (issucces) {
-				 ReponseObject object = new ReponseObject("insert success", user ,"Successfully inserted data into the database!");
-				 ObjectMapper om = new ObjectMapper();
-				 String jsonResponse  = om.writeValueAsString(object);
-				 writer.println(jsonResponse);
-				 response.sendRedirect("/Smart/signIn.html");
-			}else {
-				 ReponseObject object = new ReponseObject("Failed  success", null ,"Failed  inserted data into the database!");
-				 ObjectMapper om = new ObjectMapper();
-				 String jsonResponse  = om.writeValueAsString(object);
-				 writer.println(jsonResponse);
-			}
-		} else if ("authenticate".equals(action)) {
-			
-			String email = request.getParameter("email");
-			String password = request.getParameter("password");
-			User user = new User("", email, password);
-
-			boolean isAuthenticate = UserDao.authenticate(user);
-			
-			if(isAuthenticate) {
-				String accessToken = Token.generateAccessToken(email);
-				String refreshToken = Token.generateRefreshToken(email);
-				
-	            HttpSession httpSession = request.getSession();
-				httpSession.setAttribute("accessToken", accessToken);
-				 String name = "";				 
-				 Object object = httpSession.getAttribute("accessToken");
-					if (object != null ) {
-						 name = (String) object;
-					 }else {
-						 response.sendRedirect("/Smart/signIn.html");
-					}
-				 
-				
-//				Cookie accessTokenCookie = new Cookie("accessToken", accessToken);
-//				accessTokenCookie.setPath("/");
-//				accessTokenCookie.setHttpOnly(true);
-//				response.addCookie(accessTokenCookie);
-//				
-//				Cookie refreshTokenCookie  = new Cookie("refreshToken", refreshToken);
-//				refreshTokenCookie.setPath("/");
-//				refreshTokenCookie.setHttpOnly(true);
-//				response.addCookie(refreshTokenCookie );
-			
-				response.sendRedirect("/Smart/Login.html");
-				
-			} else {
-				writer.println("Email hoặc mật khẩu không chính xác!");
-				response.sendRedirect("/Smart/signIn.html");
-			}
+		} else {
+			response.sendError(HttpServletResponse.SC_NOT_FOUND);
 		}
-		
 	}
+	
+
+    private void addUser(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        response.setContentType("application/json");
+        PrintWriter writer = response.getWriter();
+        
+        ObjectMapper objectMapper = new ObjectMapper();
+        User user = objectMapper.readValue(request.getInputStream(), User.class);
+
+        boolean isSuccess = UserDao.addUser(user);
+
+        if (isSuccess) {
+            ReponseObject object = new ReponseObject("success", user, "Successfully inserted data into the database!");
+            String jsonResponse = objectMapper.writeValueAsString(object);
+            writer.println(jsonResponse);
+        } else {
+            writer.println("{\"status\":\"fail\",\"message\":\"Failed to insert data into the database!\"}");
+        }
+    }
+    
+    private void authenticateUser(HttpServletRequest request, HttpServletResponse response) throws IOException {
+    	 ObjectMapper objectMapper = new ObjectMapper();
+         User user = objectMapper.readValue(request.getInputStream(), User.class);
+
+         boolean isAuthenticate = UserDao.authenticate(user);
+
+         response.setContentType("application/json");
+         PrintWriter writer = response.getWriter();
+
+         if (isAuthenticate) {
+             String accessToken = Token.generateAccessToken(response, user.getEmail());
+             String refreshToken = Token.generateRefreshToken(response, user.getEmail());
+
+             ReponseObject responseObject = new ReponseObject("success", user, "Authentication successful!");
+             responseObject.addAdditionalProperty("accessToken", accessToken);
+             responseObject.addAdditionalProperty("refreshToken", refreshToken);
+             String jsonResponse = objectMapper.writeValueAsString(responseObject);
+             writer.println(jsonResponse);
+         } else {
+             response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Email hoặc mật khẩu không chính xác!");
+         }
+    }
+
+    private void getAllUsers(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        response.setContentType("application/json");
+        PrintWriter writer = response.getWriter();
+        
+        List<User> users = UserDao.getAllUser();
+        ReponseObject object = new ReponseObject("success", users, "Fetched all users");
+        
+        ObjectMapper objectMapper = new ObjectMapper();
+        String jsonResponse = objectMapper.writeValueAsString(object);
+        writer.println(jsonResponse);
+    }
 
 }
